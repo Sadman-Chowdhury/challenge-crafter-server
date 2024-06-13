@@ -30,7 +30,43 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    // =====================all collection============================================
+
+    const usersCollection = client.db("ChallengeCrafter").collection("users");
+
     // =================================================================
+
+    // Save or modify user email, status in DB
+    app.put("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email: email };
+      const options = { upsert: true };
+      const isExist = await usersCollection.findOne(query);
+      console.log("User found?----->", isExist);
+      if (isExist) {
+        if (user?.status === "Requested") {
+          const result = await usersCollection.updateOne(
+            query,
+            {
+              $set: user,
+            },
+            options
+          );
+          return res.send(result);
+        } else {
+          return res.send(isExist);
+        }
+      }
+      const result = await usersCollection.updateOne(
+        query,
+        {
+          $set: { ...user, timestamp: Date.now() },
+        },
+        options
+      );
+      res.send(result);
+    });
 
     // =================================================================================================
 
