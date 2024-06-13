@@ -84,6 +84,24 @@ async function run() {
       res.send(result);
       // console.log(result);
     });
+    app.get("/AllContest/design", async (req, res) => {
+      const query = { contestType: "design" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
+      // console.log(result);
+    });
+    app.get("/AllContest/writing", async (req, res) => {
+      const query = { contestType: "writing" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
+      // console.log(result);
+    });
+    app.get("/AllContest/AI", async (req, res) => {
+      const query = { contestType: "AI" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
+      // console.log(result);
+    });
     // =================================================================================================
 
     await client.db("admin").command({ ping: 1 });
