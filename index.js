@@ -33,6 +33,9 @@ async function run() {
     // =====================all collection============================================
 
     const usersCollection = client.db("ChallengeCrafter").collection("users");
+    const AllContestsCollection = client
+      .db("ChallengeCrafter")
+      .collection("AllContest");
 
     // =================================================================
 
@@ -68,6 +71,19 @@ async function run() {
       res.send(result);
     });
 
+    // ====================all contest=============================================
+    app.get("/AllContest", async (req, res) => {
+      const result = await AllContestsCollection.find().toArray();
+      res.send(result);
+      console.log(result);
+    });
+
+    app.get("/AllContest/coding", async (req, res) => {
+      const query = { contestType: "coding" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
+      // console.log(result);
+    });
     // =================================================================================================
 
     await client.db("admin").command({ ping: 1 });
