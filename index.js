@@ -212,11 +212,21 @@ async function run() {
       res.send(result);
       // console.log(result);
     });
-
     app.post("/addContest", async (req, res) => {
       const treeItem = req.body;
       const result = await AllContestsCollection.insertOne(treeItem);
       res.send(result);
+    });
+
+    app.get("/contestByEmail", async (req, res) => {
+      const email = req.query.email;
+      const query = { "contestCreator.email": email };
+      try {
+        const result = await AllContestsCollection.find(query).toArray();
+        res.status(200).send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
     });
     // =================================================================================================
 
