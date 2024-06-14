@@ -280,6 +280,41 @@ async function run() {
           .send({ message: "Failed to update the contest", error });
       }
     });
+    app.patch("/allContest/accepted/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: "accepted",
+        },
+      };
+      const result = await AllContestsCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    app.patch("/allContest/comment/:id", async (req, res) => {
+      const { id } = req.params;
+      const { comment } = req.body;
+
+      try {
+        const ObjectId = require("mongodb").ObjectId;
+        const contestId = new ObjectId(id);
+
+        const result = await AllContestsCollection.updateOne(
+          { _id: contestId },
+          { $push: { comments: comment } }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res
+            .status(404)
+            .send({ message: "Contest not found or comment not added" });
+        }
+
+        res.send({ modifiedCount: result.modifiedCount });
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
 
     // =================================================================================================
 
