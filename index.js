@@ -3,7 +3,7 @@ const app = express();
 require("dotenv").config();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
 // -------------------middleware----------------------------------------------------------------
@@ -84,7 +84,7 @@ async function run() {
         res.status(500).send(err);
       }
     });
-    // Save or modify user email, status in DB
+    //===================Save or modify user email, status in DB======================
     app.put("/users/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
@@ -115,7 +115,16 @@ async function run() {
       );
       res.send(result);
     });
-
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    app.delete("/deleteUser/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
     // ====================all contest=============================================
     app.get("/AllContest", async (req, res) => {
       const result = await AllContestsCollection.find().toArray();
