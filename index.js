@@ -212,6 +212,12 @@ async function run() {
       res.send(result);
       // console.log(result);
     });
+
+    app.post("/addContest", async (req, res) => {
+      const treeItem = req.body;
+      const result = await AllContestsCollection.insertOne(treeItem);
+      res.send(result);
+    });
     // =================================================================================================
 
     await client.db("admin").command({ ping: 1 });
