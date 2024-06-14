@@ -217,7 +217,6 @@ async function run() {
       const result = await AllContestsCollection.insertOne(treeItem);
       res.send(result);
     });
-
     app.get("/contestByEmail", async (req, res) => {
       const email = req.query.email;
       const query = { "contestCreator.email": email };
@@ -227,6 +226,12 @@ async function run() {
       } catch (err) {
         res.status(500).send({ message: err.message });
       }
+    });
+    app.delete("/deleteContest/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await AllContestsCollection.deleteOne(query);
+      res.send(result);
     });
     // =================================================================================================
 
