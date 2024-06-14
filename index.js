@@ -227,12 +227,60 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
+    app.get("/getOneContest/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await AllContestsCollection.findOne(query);
+      res.send(result);
+    });
     app.delete("/deleteContest/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await AllContestsCollection.deleteOne(query);
       res.send(result);
     });
+    app.patch("/updateContest/:id", async (req, res) => {
+      const { id } = req.params;
+      const {
+        contestName,
+        contestType,
+        startDate,
+        endDate,
+        contestPrice,
+        contestPrize,
+        description,
+        taskSubmissionText,
+        status,
+        image,
+        contestCreator,
+      } = req.body;
+
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          contestName,
+          contestType,
+          startDate,
+          endDate,
+          contestPrice,
+          contestPrize,
+          description,
+          taskSubmissionText,
+          status,
+          image,
+          contestCreator,
+        },
+      };
+      try {
+        const result = await AllContestsCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: "Failed to update the contest", error });
+      }
+    });
+
     // =================================================================================================
 
     await client.db("admin").command({ ping: 1 });
