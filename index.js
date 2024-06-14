@@ -188,29 +188,35 @@ async function run() {
       console.log(result);
     });
 
-    app.get("/AllContest/coding", async (req, res) => {
-      const query = { contestType: "coding" };
+    app.get("/AllContest/imageDesign", async (req, res) => {
+      const query = { contestType: "Image Design" };
       const result = await AllContestsCollection.find(query).toArray();
       res.send(result);
-      // console.log(result);
     });
-    app.get("/AllContest/design", async (req, res) => {
-      const query = { contestType: "design" };
+    app.get("/AllContest/marketingStrategy", async (req, res) => {
+      const query = { contestType: "Marketing Strategy" };
       const result = await AllContestsCollection.find(query).toArray();
       res.send(result);
-      // console.log(result);
     });
-    app.get("/AllContest/writing", async (req, res) => {
-      const query = { contestType: "writing" };
+    app.get("/AllContest/articleWriting", async (req, res) => {
+      const query = { contestType: "Article Writing" };
       const result = await AllContestsCollection.find(query).toArray();
       res.send(result);
-      // console.log(result);
     });
-    app.get("/AllContest/AI", async (req, res) => {
-      const query = { contestType: "AI" };
+    app.get("/AllContest/digitalAdvertis", async (req, res) => {
+      const query = { contestType: "Digital advertisement" };
       const result = await AllContestsCollection.find(query).toArray();
       res.send(result);
-      // console.log(result);
+    });
+    app.get("/AllContest/gamingReview", async (req, res) => {
+      const query = { contestType: "Gaming Review" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/AllContest/bookReview", async (req, res) => {
+      const query = { contestType: "Book Review" };
+      const result = await AllContestsCollection.find(query).toArray();
+      res.send(result);
     });
     app.post("/addContest", async (req, res) => {
       const treeItem = req.body;
