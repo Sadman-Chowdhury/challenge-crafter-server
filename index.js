@@ -239,6 +239,20 @@ async function run() {
       const result = await AllContestsCollection.findOne(query);
       res.send(result);
     });
+
+    app.get("/AllContests/contestType", async (req, res) => {
+      const { contestType } = req.query;
+      try {
+        const result = await AllContestsCollection.find({
+          contestType: { $regex: new RegExp(`^${contestType}`, "i") },
+        }).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching contests", error);
+        res.status(500).send({ error: "Error fetching contests" });
+      }
+    });
+
     app.delete("/deleteContest/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
