@@ -2,19 +2,23 @@ const express = require("express");
 const app = express();
 require("dotenv").config();
 const cors = require("cors");
+const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 // -------------------middleware----------------------------------------------------------------
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["https://challenge-crafter.web.app"],
+  // origin: ["http://localhost:5173"],
   credentials: true,
   optionSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(bodyParser.json());
 
 // ---------------------------------------------------------------------------------------------
 const verifyToken = async (req, res, next) => {
@@ -50,11 +54,21 @@ async function run() {
     // =====================all collection============================================
 
     const usersCollection = client.db("ChallengeCrafter").collection("users");
+
     const AllContestsCollection = client
       .db("ChallengeCrafter")
       .collection("AllContest");
 
+    const paymentCollection = client
+      .db("ChallengeCrafter")
+      .collection("Payment");
+
+    const contestWinnerCollection = client
+      .db("ChallengeCrafter")
+      .collection("Winner");
+
     // =================================================================
+
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       // console.log("I need a new jwt", user);
@@ -90,15 +104,15 @@ async function run() {
       const user = req.body;
       const query = { email: email };
       const options = { upsert: true };
+
       const isExist = await usersCollection.findOne(query);
       console.log("User found?----->", isExist);
+
       if (isExist) {
         if (user?.status === "Requested") {
           const result = await usersCollection.updateOne(
             query,
-            {
-              $set: user,
-            },
+            { $set: user },
             options
           );
           return res.send(result);
@@ -106,15 +120,15 @@ async function run() {
           return res.send(isExist);
         }
       }
+
       const result = await usersCollection.updateOne(
         query,
-        {
-          $set: { ...user, timestamp: Date.now() },
-        },
+        { $set: { ...user, timestamp: Date.now() } },
         options
       );
       res.send(result);
     });
+
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
@@ -180,7 +194,28 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
 
+      if (user) {
+        admin = user?.role == "admin";
+      }
+      res.send({ admin });
+    });
+    app.get("/users/creator/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let creator = false;
+
+      if (user) {
+        creator = user?.role == "creator";
+      }
+      res.send({ creator });
+    });
     // ====================all contest=============================================
     app.get("/AllContest", async (req, res) => {
       const result = await AllContestsCollection.find().toArray();
@@ -219,8 +254,8 @@ async function run() {
       res.send(result);
     });
     app.post("/addContest", async (req, res) => {
-      const treeItem = req.body;
-      const result = await AllContestsCollection.insertOne(treeItem);
+      const Item = req.body;
+      const result = await AllContestsCollection.insertOne(Item);
       res.send(result);
     });
     app.get("/contestByEmail", async (req, res) => {
@@ -239,7 +274,6 @@ async function run() {
       const result = await AllContestsCollection.findOne(query);
       res.send(result);
     });
-
     app.get("/AllContests/contestType", async (req, res) => {
       const { contestType } = req.query;
       try {
@@ -252,7 +286,6 @@ async function run() {
         res.status(500).send({ error: "Error fetching contests" });
       }
     });
-
     app.delete("/deleteContest/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -333,6 +366,138 @@ async function run() {
         res.send({ modifiedCount: result.modifiedCount });
       } catch (error) {
         res.status(500).send({ message: error.message });
+      }
+    });
+
+    // ===================================Payment Api==============================================================
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", async (req, res) => {
+      const payment = req.body;
+      try {
+        // Insert payment information into the database
+        const paymentResult = await paymentCollection.insertOne(payment);
+        res.send(paymentResult);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: error.message });
+      }
+    });
+
+    app.patch("/updateParticipantsCounts/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const result = await AllContestsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $inc: { participantsCount: 1 } }
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: error.message });
+      }
+    });
+    app.get("/payment", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+    // ===============================User Dashboard api==================================================================
+    app.get("/myParticipatedContestByEmail", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      try {
+        const result = await paymentCollection.find(query).toArray();
+        res.status(200).send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+    app.get("/getParticipatedContestData/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/submit-contest-task", async (req, res) => {
+      const { contestId, submissionDetails } = req.body;
+
+      try {
+        const contest = await AllContestsCollection.findOne({
+          _id: new ObjectId(contestId),
+        });
+
+        if (contest) {
+          const updateResult = await AllContestsCollection.updateOne(
+            { _id: new ObjectId(contestId) },
+            { $push: { submissions: submissionDetails } }
+          );
+
+          if (updateResult.modifiedCount > 0) {
+            res.status(200).json({ message: "Submission successful" });
+          } else {
+            res.status(500).json({ message: "Failed to update submission" });
+          }
+        } else {
+          res.status(404).json({ message: "Contest not found" });
+        }
+      } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+      }
+    });
+
+    app.post("/postContestWinner", async (req, res) => {
+      const winner = req.body;
+
+      try {
+        // Insert the winner information into the contestWinnerCollection
+        const winnerResult = await contestWinnerCollection.insertOne(winner);
+
+        // Update the respective contest in AllContestsCollection
+        const contestId = winner.contestId; // Ensure the winner object has a contestId field
+        if (!contestId) {
+          return res.status(400).send({ error: "contestId is required" });
+        }
+
+        const contestUpdateResult = await AllContestsCollection.updateOne(
+          { _id: new ObjectId(contestId) },
+          { $set: { winner: winner.winnerInfo } }
+        );
+
+        res.send({ winnerResult, contestUpdateResult });
+      } catch (error) {
+        console.error("Error declaring winner:", error);
+        res.status(500).send({ error: "Failed to declare winner" });
+      }
+    });
+
+    app.get("/getContestWinner", async (req, res) => {
+      const result = await contestWinnerCollection.find().toArray();
+      res.send(result);
+      console.log(result);
+    });
+    app.get("/winnerContestByEmail", async (req, res) => {
+      const email = req.query.email;
+      const query = { "winnerInfo.email": email };
+      try {
+        const result = await contestWinnerCollection.find(query).toArray();
+        res.status(200).send(result);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
       }
     });
 
